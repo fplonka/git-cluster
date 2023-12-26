@@ -1,0 +1,3 @@
+- take as input folder with git repo or url which will get cloned to some temp dir
+- try going by mr instead of by commit
+- color points based on commit nr
