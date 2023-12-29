@@ -44,3 +44,10 @@ python main.py /path/to/repo -o output.html
 ```bash
 python main.py https://github.com/user/repo.git
 ```
+
+### Method
+For each pair of files in the specified repository we compute a distance metric: 1 - (number of commits which change both files) / (number of commits which change  at least one of the files). For a repository with N files this gives us an N x N distance matrix.
+
+On this distance matrix we can apply [multidimensional scaling](https://en.wikipedia.org/wiki/Multidimensional_scaling), which assigns a point in 2D to each file. These points are chosen such that the Euclidian distance between them is close to their distance in the distance matrix. When we plot this with [plotly](https://plotly.com/python) we get a visualisation where files which are worked on (committed) together are close together. For most repositories this reveals interesting structure.
+
+Note that since MDS is inefficient (cubic in N), git-cluster implements [landmark MDS](https://graphics.stanford.edu/courses/cs468-05-winter/Papers/Landmarks/Silva_landmarks5.pdf), where we select n (with n < N) random points and only run the expensive proper MDS algorithm on that n x n submatrix. Then we do linear algebra black magic to triangulate the positions of the remaining points. This is much faster while still giving good results, and means we only need an n x N distance matrix, making the whole procedure feasible even for very large repositories.
