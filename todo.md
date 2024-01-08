@@ -1,3 +1,4 @@
-- take as input folder with git repo or url which will get cloned to some temp dir
-- try going by mr instead of by commit
-- color points based on commit nr
+- metal implementation of SPE
+  - outer for loop: add to command queue
+  - inner loop: n/2 x 1 x 1 job, kernel does operation for one ponit
+  - min hash to estimate jaccard (should have done this earlier!!!!! can be parallized)

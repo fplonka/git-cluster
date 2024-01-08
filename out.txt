@@ -1,0 +1,40 @@
+Loading distance matrix from cache...
+MAX SIZE IS 740
+N is 8787
+Creating embeddings...
+ 
+================================================================================
+ Parallel Accelerator Optimizing:  Function TEST, /Users/filip/SQuaD-MDS/SQuaD 
+MDS/spe.py (183)  
+================================================================================
+
+
+Parallel loop listing for  Function TEST, /Users/filip/SQuaD-MDS/SQuaD MDS/spe.py (183) 
+--------------------------------------------|loop #ID
+@numba.jit(nopython=True, parallel=True)    | 
+def TEST():                                 | 
+    print("TESTING")                        | 
+    for idx in range(200000):               | 
+        # print(idx)                        | 
+        for k in prange(1):-----------------| #0
+            k = 2                           | 
+            x = k                           | 
+--------------------------------- Fusing loops ---------------------------------
+Attempting fusion of parallel loops (combines loops with similar properties)...
+----------------------------- Before Optimisation ------------------------------
+--------------------------------------------------------------------------------
+------------------------------ After Optimisation ------------------------------
+Parallel structure is already optimal.
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+ 
+---------------------------Loop invariant code motion---------------------------
+Allocation hoisting:
+No allocation hoisting found
+
+Instruction hoisting:
+No instruction hoisting found
+--------------------------------------------------------------------------------
+TESTING
+Took 0.15105175971984863
+Visualising embeddings...
