@@ -1,5 +1,3 @@
-# git-cluster
-
 ## Description
 
 Visualize file relationships in a Git repository as an interactive 2D plot using multidimensional scaling (MDS). Files frequently modified together in commits are positioned closely in the visualization.
@@ -8,11 +6,14 @@ Visualize file relationships in a Git repository as an interactive 2D plot using
 ### Example visualisations
 
 [pytorch/pytorch](https://github.com/pytorch/pytorch)
-<img width="995" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/37ee4199-1a5f-4fb1-bf47-8b27504e11c7">
+<img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/8b7ee22a-8c2a-4155-9117-3428a8c14adb">
 
+[torvalds/linux](https://github.com/torvalds/linux)
+<img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/a4e33c5c-b9cb-4ff0-baad-5889844624a5">
 
-[kubernetes/kubernetes](https://github.com/kubernetes/kubernetes)
-<img width="995" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/5d6eb680-fd7b-4012-aa59-b8175d032212">
+[nodejs/node](https://github.com/nodejs/node)
+<img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/18832d08-c4e6-4e05-89f6-d999703cf7b6">
+
 
 ## Installation
 
@@ -43,8 +44,10 @@ python main.py https://github.com/user/repo.git
 ```
 
 ### Method
-For each pair of files in the specified repository we compute a distance metric: 1 - (number of commits which change both files) / (number of commits which change  at least one of the files). For a repository with N files this gives us an N x N distance matrix.
+For each pair of files in the specified repository we compute a distance metric: 1 - (number of commits which change both files) / (number of commits which change at least one of the files). For a repository with N files this gives us an N x N distance matrix.
 
-On this distance matrix we can apply [multidimensional scaling](https://en.wikipedia.org/wiki/Multidimensional_scaling), which assigns a point in 2D to each file. These points are chosen such that the Euclidian distance between them is close to their distance in the distance matrix. When we plot this with [plotly](https://plotly.com/python) we get a visualisation where files which are worked on (committed) together are close together. For most repositories this reveals interesting structure.
+On this distance matrix we can apply techniques from [multidimensional scaling](https://en.wikipedia.org/wiki/Multidimensional_scaling), which assigns a point in 2D to each file. These points are chosen such that the Euclidian distance between them is close to their distance in the distance matrix. When we plot this with [plotly](https://plotly.com/python) we get a visualisation where files which are worked on (committed) together are close together. For most repositories this reveals interesting structure.
 
-Note that since MDS is inefficient (cubic in N), git-cluster implements [landmark MDS](https://graphics.stanford.edu/courses/cs468-05-winter/Papers/Landmarks/Silva_landmarks5.pdf), where we select n (with n < N) random points and only run the expensive proper MDS algorithm on that n x n submatrix. Then we do linear algebra black magic to triangulate the positions of the remaining points. This is much faster while still giving good results, and means we only need an n x N distance matrix, making the whole procedure feasible even for very large repositories.
+The method used to find these 2D positions is [pivot-based Stochastic Proximity Embedding](https://www.researchgate.net/publication/10602021_A_modified_update_rule_for_stochastic_proximity_embedding), which, over many iterations, picks a random point and then adjusts the position of all other points so that their embedding distance to the pivot point more closely matches their distance metric to the pivot. The adjustments are proportional to a learning rate which is decreased over time. For large repositories (10k+ files) around 1 milion such iterations are needed to get a very good result.
+
+A goal for a future version is to compute the embedding on the GPU using metal shaders, hopefully speeding up the whole process significantly.
