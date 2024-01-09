@@ -12,7 +12,7 @@ Visualize file relationships in a Git repository as an interactive 2D plot using
 <img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/a4e33c5c-b9cb-4ff0-baad-5889844624a5">
 
 [nodejs/node](https://github.com/nodejs/node)
-<img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/18832d08-c4e6-4e05-89f6-d999703cf7b6">
+<img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/d3cc38eb-96f0-4d72-b3f8-8e0005f1973c">
 
 
 ## Installation
