@@ -9,7 +9,8 @@ Visualize file relationships in a Git repository as an interactive 2D plot using
 <img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/8b7ee22a-8c2a-4155-9117-3428a8c14adb">
 
 [torvalds/linux](https://github.com/torvalds/linux)
-<img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/a4e33c5c-b9cb-4ff0-baad-5889844624a5">
+<img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/47baa2d6-507d-45cf-afc1-a1d7bfce6624">
+
 
 [nodejs/node](https://github.com/nodejs/node)
 <img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/d3cc38eb-96f0-4d72-b3f8-8e0005f1973c">
