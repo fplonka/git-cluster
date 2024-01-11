@@ -71,6 +71,30 @@ def calculate_loss(X, D):
     return loss
 
 
+@numba.jit(nopython=True, fastmath=True)
+def calculate_loss(X, D):
+    distances = np.sqrt(((X[:, None, :] - X)**2).sum(axis=2))
+    loss = np.sum((D - distances) ** 2) / 2
+
+    return loss
+
+
+@numba.jit(nopython=True, fastmath=True)
+def calculate_loss2(X, D):
+    loss = 0
+    N = X.shape[0]
+    for i in range(N):
+        xi = X[i]
+        partial = 0
+        for j in range(i+1, N):
+            xj = X[j]
+            partial = (np.linalg.norm(xi - xj) - D[i, j])**2
+
+        loss += partial
+
+    return loss
+
+
 @numba.jit(nopython=True)
 def simple_hash(x, k):
     return hash(x) ^ k
@@ -105,3 +129,19 @@ def estimated_jaccard(signature_matrix, i, j):
     res = intersection / signature_matrix.shape[1]
     # print("retunring", res)
     return res
+
+
+def euclidean_distances(Y):
+    Q = np.einsum("ij,ij->i", Y, Y)[:, np.newaxis]
+    distances = -2 * Y @ Y . T
+    distances += Q
+    distances += Q.T
+    np.maximum(distances, 1e-10, out=distances)
+    return np.sqrt(distances)
+
+
+def calculate_loss3(X, D):
+    distances = euclidean_distances(X)
+    loss = np.sum((D - distances) ** 2) / 2
+
+    return loss

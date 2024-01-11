@@ -23,8 +23,6 @@ void testSPE() {
     spe->prepare_data();
     spe->do_spe_loop();
 
-    std::cout << "Execution finished.";
-
     spe->write_results();
 
     p_pool->release();

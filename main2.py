@@ -5,7 +5,7 @@ import math
 from spe import spe_fancy
 # import graph_tool.all as gt
 import numba
-from utils import calculate_loss, minhash_signature, estimated_jaccard
+from utils import calculate_loss, minhash_signature, estimated_jaccard, calculate_loss2, calculate_loss3
 from utils import log_space_values
 import matplotlib.pyplot as plt
 from skopt import gp_minimize
@@ -231,6 +231,7 @@ def visualize_embedding_with_extension_color(embedding, file_names, commits, rep
     fig = go.Figure(data=traces, layout=layout)
     if output_file:
         fig.write_html(output_file, include_plotlyjs=True)
+        print("Saved output to", output_file)
         webbrowser.open('file://' + os.path.realpath(output_file), new=2)
     else:
         fig.show()
@@ -266,7 +267,7 @@ def dict_to_padded_array(commit_dict):
     # Step 2: Find the maximum set size
     max_set_size = max(len(s) for s in commit_dict.values())
 
-    print("MAX SIZE IS", max_set_size)
+    # print("MAX SIZE IS", max_set_size)
 
     # Step 3: Initialize a 2D array with -1
     padded_array = np.iinfo(np.int32).max * \
@@ -479,18 +480,23 @@ def write_dist_matrix_and_params_to_file(num_iters, initial_lr, final_lr, distan
 
 
 def run_cpp_process():
-    # Path to your C++ executable
     cpp_executable = "metal/build/MetalSPE"
 
-    # Run the C++ executable
-    result = subprocess.run([cpp_executable], capture_output=True, text=True)
+    if not os.path.exists(cpp_executable):
+        print(
+            f"Error: executable {cpp_executable} not found. Run `make all` in metal/ first to use GPU acceleration.")
+        exit(1)
 
-    # Check if the process ran successfully
-    if result.returncode != 0:
-        print("C++ process failed with return code:", result.returncode)
-        print("Error output:", result.stderr)
-    else:
-        print("C++ process output:\n", result.stdout)
+    # Start the C++ executable process
+    with subprocess.Popen([cpp_executable], stdout=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True) as proc:
+        for line in proc.stdout:
+            # Print each line of output in real-time
+            print(f"\r{line.strip()}", end='', flush=True)
+    print()
+
+    # Check the process exit code
+    if proc.returncode != 0:
+        print("C++ process failed with return code:", proc.returncode)
 
 
 def process_repository(args):
@@ -585,7 +591,7 @@ def process_repository(args):
     # embedding_animated = spe_optimized_parallel_fancy_animated(
     # commits_arr, 15000, 0.1, 0.0000001, 50)
     t1 = time.time()
-    print("Took", t1 - t0)
+    print(f"Calculating embeddings took {t1 - t0 :.1f}s")
 
     print("Visualising embeddings...")
     visualize_embedding_with_extension_color(
@@ -596,10 +602,7 @@ def process_repository(args):
     # visualize_embedding_with_extension_color(
     # embedding, file_names, commits, repo_name, output_file)
 
-    print("Loss:", calculate_loss(embedding, distance_matrix))
-
-    if output_file:
-        print("Saved output to", output_file)
+    print(f"Loss:  {calculate_loss3(embedding, distance_matrix):.2f}")
 
 
 def clone_repo(repo_url, temp_dir):

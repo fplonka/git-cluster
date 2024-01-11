@@ -47,9 +47,9 @@ void MetalSPE::init_params_from_file(const std::string& filename) {
 MetalSPE::MetalSPE(std::string distance_matrix_filename) {
     m_dist_matrix_vec = std::vector<std::vector<float>>();
     init_params_from_file(distance_matrix_filename);
-    std::cout << "N is " << m_N << "\n";
-    std::cout << "params are: " << m_params.num_iterations << " "
-              << m_params.initial_lr << " " << m_params.final_lr << "\n";
+    // std::cout << "N is " << m_N << "\n";
+    // std::cout << "params are: " << m_params.num_iterations << " "
+    //   << m_params.initial_lr << " " << m_params.final_lr << "\n";
 }
 
 void MetalSPE::init_with_device(MTL::Device* device) {
@@ -134,17 +134,22 @@ void MetalSPE::do_spe_loop() {
             batches_committed++;
         }
         command_buffer->commit();
+        std::cout << "Commmmited "
+                  << ((float)batches_committed / (float)num_iters * 100.f)
+                  << "% of all GPU commands...\n";
+        std::cout.flush();
         // std::cout << "at " << batches_committed << "\n";
     }
+    std::cout << "\n";
 
-    std::cout << "waiting...\n";
+    // std::cout << "waiting...\n";
     command_buffer->waitUntilCompleted();
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
 
-    std::cout << "Computing embeddings took " << elapsed.count()
-              << " seconds\n";
+    // std::cout << "Computing embeddings took " << elapsed.count()
+    //   << " seconds\n";
 }
 
 void MetalSPE::encode_spe_command(MTL::ComputeCommandEncoder* compute_encoder,
