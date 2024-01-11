@@ -29,7 +29,7 @@ def log_space_values(a, b, n):
     return np.logspace(log_a, log_b, num=n, base=10)
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, fastmath=True)
 def jaccard_fast(row1, row2):
     padding_value = np.iinfo(np.int32).max
     intersection = 0

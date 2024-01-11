@@ -1,3 +1,5 @@
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
 from datasketch import MinHash, MinHashLSH
 from scipy.optimize import curve_fit
 import math
@@ -35,6 +37,7 @@ from spe import spe_optimized
 from spe import spe_optimized_parallel
 from spe import spe_optimized_parallel_fancy
 from spe import spe_optimized_parallel_dist
+from spe import spe_optimized_parallel_fancy_animated
 
 
 def run_git_command(repo_path, command):
@@ -60,10 +63,10 @@ def get_commits(repo_path):
     return commits
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, fastmath=True)
 def create_distance_matrix_fast(commits_arr):
     N = len(commits_arr)
-    matrix = np.ones((N, N))
+    matrix = np.ones((N, N), dtype=np.float32)
 
     for i in range(N):
         for j in range(i+1, N):
@@ -108,6 +111,89 @@ def get_extension_colors(file_names, commits):
     return extension_colors
 
 
+def visualize_embedding_with_extension_color_animated(embeddings, file_names, commits, repo_name, output_file=None):
+    extension_colors = get_extension_colors(file_names, commits)
+
+    # Create a subplot for the animation
+    fig = make_subplots()
+
+    for i in range(len(embeddings)):
+        mean_x, mean_y = np.mean(embeddings[i], axis=0)
+        embeddings[i] = embeddings[i] - np.array([mean_x, mean_y])
+
+    frames = []
+
+    for embedding in embeddings:  # Loop over each embedding (each frame)
+        traces = []
+        for ext, color in extension_colors.items():
+            indices = [i for i, name in enumerate(
+                file_names) if get_extension(name) == ext]
+            if indices:
+                x_values = embedding[indices, 0]
+                y_values = embedding[indices, 1]
+                hovertexts = [file_names[i] for i in indices]
+
+                trace = go.Scatter(
+                    x=x_values,
+                    y=y_values,
+                    mode='markers',
+                    hoverinfo='text',
+                    hovertext=hovertexts,
+                    marker=dict(size=5, color=color),
+                    name=ext,
+                )
+                traces.append(trace)
+
+        # Create a frame for each embedding
+        frame = go.Frame(data=traces, name=str(embedding))
+        frames.append(frame)
+
+    fig.frames = frames
+
+    frame_duration = 1000
+    transition_duration = 1000
+    # Add play and pause buttons
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                buttons=[
+                    dict(label="Play", method="animate", args=[None]),
+                    # dict(label="Pause", method="animate", args=[
+                    #  [None], {"frame": {"duration": 100, "redraw": False}}])
+                ],
+            )
+        ],
+        title=f'File Commit-Similarity Visualization for {repo_name}',
+        xaxis=dict(title='MDS Dimension 1'),
+        yaxis=dict(title='MDS Dimension 2'),
+        hovermode='closest',
+        paper_bgcolor='white',
+        plot_bgcolor='rgba(240,240,240,1)'
+    )
+
+    # Add the first frame's data to set up the initial view
+    initial_embedding = embeddings[0]
+    for ext, color in extension_colors.items():
+        indices = [i for i, name in enumerate(
+            file_names) if get_extension(name) == ext]
+        if indices:
+            fig.add_trace(go.Scatter(
+                x=initial_embedding[indices, 0],
+                y=initial_embedding[indices, 1],
+                mode='markers',
+                hoverinfo='text',
+                marker=dict(size=5, color=color),
+                name=ext,
+            ))
+
+    if output_file:
+        fig.write_html(output_file, include_plotlyjs=True)
+        webbrowser.open('file://' + os.path.realpath(output_file), new=2)
+    else:
+        fig.show()
+
+
 def visualize_embedding_with_extension_color(embedding, file_names, commits, repo_name, output_file=None):
     extension_colors = get_extension_colors(file_names, commits)
 
@@ -123,7 +209,7 @@ def visualize_embedding_with_extension_color(embedding, file_names, commits, rep
             y_values = embedding[indices, 1]
             hovertexts = [file_names[i] for i in indices]
 
-            trace = go.Scatter(
+            trace = go.Scattergl(
                 x=x_values,
                 y=y_values,
                 mode='markers',
@@ -354,6 +440,21 @@ def compute_minhash_signature_matrix(commits, num_hashes):
     return signature_matrix
 
 
+def get_gpu_embeddings(file_path):
+    x_coords = []
+    y_coords = []
+
+    with open(file_path, 'r') as file:
+        for line in file:
+            x, y = line.strip().split(', ')
+            x_coords.append(float(x))
+            y_coords.append(float(y))
+
+    # Convert lists to a NumPy array of shape (n, 2)
+    coords_array = np.column_stack((x_coords, y_coords))
+    return coords_array
+
+
 @numba.jit(nopython=True, fastmath=True)
 def calculate_percentiles(matrix):
     flat_array = matrix.ravel()
@@ -368,7 +469,23 @@ def calculate_percentiles(matrix):
     return percentile_matrix
 
 
-def process_repository(repo_path_or_url, output_file):
+def write_dist_matrix_and_params_to_file(num_iters, initial_lr, final_lr, distance_matrix, filename):
+    with open(filename, 'wb') as f:
+        print("have", num_iters, "iteartions")
+        f.write(np.int32(num_iters).tobytes())
+        f.write(np.float32(initial_lr).tobytes())
+        f.write(np.float32(final_lr).tobytes())
+        N = distance_matrix.shape[0]
+        f.write(np.int32(N).tobytes())
+        f.write(distance_matrix.tobytes())
+
+
+def process_repository(args):
+    repo_path_or_url = args.repo_path_or_url
+    output_file = args.output
+    using_gpu = args.use_gpu
+    using_cache = args.cache
+
     np.random.seed(42)  # You can use any integer as the seed value
 
     is_url = repo_path_or_url.startswith(
@@ -378,17 +495,17 @@ def process_repository(repo_path_or_url, output_file):
     else:
         repo_name = get_last_folder_name(repo_path_or_url)
 
-    cache_path = os.path.join('cache', repo_name)
+    if using_cache:
+        cache_path = os.path.join('cache', repo_name)
+        os.makedirs('cache', exist_ok=True)
 
-    if os.path.isfile(cache_path):
+    if using_cache and os.path.isfile(cache_path):
         print("Loading distance matrix from cache...")
         with open(cache_path, 'rb') as f:
             file_names, commits = pickle.load(f)
-            # distance_matrix = np.load(f'{cache_path}.npy')
-            # file_names, commits = pickle.load(f)
+            distance_matrix = np.load(f'{cache_path}.npy')
         N = len(file_names)
     else:
-
         # Clone the repo if a URL is provided
         with tempfile.TemporaryDirectory() as temp_dir:
             if is_url:
@@ -412,21 +529,20 @@ def process_repository(repo_path_or_url, output_file):
         # Create distance matrix
         file_names = np.array(list(commits.keys()))
         N = len(file_names)
-
         commits_arr = dict_to_padded_array(commits)
 
+        print("Creating distance matrix...")
         t0 = time.time()
         distance_matrix = create_distance_matrix_fast(commits_arr)
         t1 = time.time()
-        print("Took", t1 - t0)
+        # distance_matrix = distance_matrix.astype(np.float16)
+        print(f"Took {t1 - t0}s")
 
-        gc.collect()
-        print("done with gc")
-        with open(cache_path, 'wb') as f:
-            print("doing pickle dump")
-            pickle.dump((file_names, commits), f)
-            print("doing np save")
-            np.save(f'{cache_path}.npy', distance_matrix)
+        if using_cache:
+            with open(cache_path, 'wb') as f:
+                pickle.dump((file_names, commits), f)
+                np.save(f'{cache_path}.npy', distance_matrix)
+                print("Saved distance matrix and commit info to cache")
 
     commits_arr = dict_to_padded_array(commits)
 
@@ -435,14 +551,33 @@ def process_repository(repo_path_or_url, output_file):
 
     t0 = time.time()
 
-    embedding = spe_optimized_parallel_fancy(
-        commits_arr, 1027000-1, 0.1, 0.000001)
+    initial_lr = 0.1
+    final_lr = 0.0000001
+    if using_gpu:
+        write_dist_matrix_and_params_to_file(
+            args.num_iterations, initial_lr, final_lr, distance_matrix, 'dist_matrix_data')
+        embedding = get_gpu_embeddings(
+            '/Users/filip/metal-cpp-example/embeddings.txt')
+    else:
+        embedding = spe_optimized_parallel_dist(
+            distance_matrix, args.num_iterations, initial_lr, final_lr)
+
+    # embedding = spe_optimized_parallel_fancy(
+    # commits_arr, 5000, 0.1, 0.0000001)
+
+    # embedding_animated = spe_optimized_parallel_fancy_animated(
+    # commits_arr, 15000, 0.1, 0.0000001, 50)
     t1 = time.time()
     print("Took", t1 - t0)
 
     print("Visualising embeddings...")
     visualize_embedding_with_extension_color(
         embedding, file_names, commits, repo_name, output_file)
+    # visualize_embedding_with_extension_color_animated(
+    # embedding_animated, file_names, commits, repo_name, output_file)
+
+    # visualize_embedding_with_extension_color(
+    # embedding, file_names, commits, repo_name, output_file)
 
     distance_matrix = np.load(f'{cache_path}.npy')
     print("done")
@@ -476,12 +611,20 @@ def get_last_folder_name(path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process a Git repository.')
+    parser = argparse.ArgumentParser(
+        description='Visualize file relationships in a Git repository as an interactive 2D plot. Files frequently modified together in commits are positioned closely in the visualization.')
     parser.add_argument('repo_path_or_url', type=str,
                         help='Path to or URL of the Git repository')
     parser.add_argument('-o', '--output', type=str,
                         help='Output file for the visualization (optional)')
+    parser.add_argument('-n', '--num-iterations', type=int, default=10000,
+                        help='Number of iterations to run the algorithm (default: 10000)')
+    parser.add_argument('--use-gpu', action='store_true',
+                        help='Use GPU for computations (ARM MacOS only)')
+    parser.add_argument('-c', '--cache', action='store_true',
+                        help='Cache distance matrix for future reuse')
 
     args = parser.parse_args()
 
-    process_repository(args.repo_path_or_url, args.output)
+    # process_repository(args.repo_path_or_url, args.output)
+    process_repository(args)
