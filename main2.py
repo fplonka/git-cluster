@@ -1,6 +1,5 @@
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
-from datasketch import MinHash, MinHashLSH
 from scipy.optimize import curve_fit
 import math
 from spe import spe_fancy
@@ -471,13 +470,27 @@ def calculate_percentiles(matrix):
 
 def write_dist_matrix_and_params_to_file(num_iters, initial_lr, final_lr, distance_matrix, filename):
     with open(filename, 'wb') as f:
-        print("have", num_iters, "iteartions")
         f.write(np.int32(num_iters).tobytes())
         f.write(np.float32(initial_lr).tobytes())
         f.write(np.float32(final_lr).tobytes())
         N = distance_matrix.shape[0]
         f.write(np.int32(N).tobytes())
         f.write(distance_matrix.tobytes())
+
+
+def run_cpp_process():
+    # Path to your C++ executable
+    cpp_executable = "metal/build/MetalSPE"
+
+    # Run the C++ executable
+    result = subprocess.run([cpp_executable], capture_output=True, text=True)
+
+    # Check if the process ran successfully
+    if result.returncode != 0:
+        print("C++ process failed with return code:", result.returncode)
+        print("Error output:", result.stderr)
+    else:
+        print("C++ process output:\n", result.stdout)
 
 
 def process_repository(args):
@@ -556,8 +569,12 @@ def process_repository(args):
     if using_gpu:
         write_dist_matrix_and_params_to_file(
             args.num_iterations, initial_lr, final_lr, distance_matrix, 'dist_matrix_data')
+
+        # run metal/build/SPE...
+        run_cpp_process()
+
         embedding = get_gpu_embeddings(
-            '/Users/filip/metal-cpp-example/embeddings.txt')
+            'metal/embeddings.txt')
     else:
         embedding = spe_optimized_parallel_dist(
             distance_matrix, args.num_iterations, initial_lr, final_lr)
@@ -579,8 +596,6 @@ def process_repository(args):
     # visualize_embedding_with_extension_color(
     # embedding, file_names, commits, repo_name, output_file)
 
-    distance_matrix = np.load(f'{cache_path}.npy')
-    print("done")
     print("Loss:", calculate_loss(embedding, distance_matrix))
 
     if output_file:

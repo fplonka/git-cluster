@@ -11,33 +11,13 @@
 #include <Metal/Metal.hpp>
 #include <iostream>
 
-#include "MetalAdder.hpp"
 #include "MetalSPE.hpp"
-
-// void add_arrays(const float* inA, const float* inB, float* result, int
-// length) {
-//     for (int index = 0; index < length; index++) {
-//         result[index] = inA[index] + inB[index];
-//     }
-// }
-
-void testAdder() {
-    NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
-    MTL::Device* device = MTL::CreateSystemDefaultDevice();
-    MetalAdder* adder = new MetalAdder();
-    adder->init_with_device(device);
-    adder->prepare_data();
-    adder->send_compute_command();
-
-    std::cout << "Execution finished.";
-    p_pool->release();
-}
 
 void testSPE() {
     NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
     MTL::Device* device = MTL::CreateSystemDefaultDevice();
     MetalSPE* spe =
-        new MetalSPE("/Users/filip/SQuaD-MDS/SQuaD MDS/dist_matrix_data");
+        new MetalSPE("/Users/filip/Code/python/git-cluster/dist_matrix_data");
 
     spe->init_with_device(device);
     spe->prepare_data();

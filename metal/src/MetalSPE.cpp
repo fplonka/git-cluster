@@ -87,24 +87,13 @@ void MetalSPE::prepare_data() {
         m_device->newBuffer(dist_matrix_size, MTL::ResourceStorageModeShared);
     // std::memcpy(m_dist_matrix_buffer->contents(),
     // m_dist_matrix_nparr.data<float>(), dist_matrix_size);
-
-    std::cout << "data prepared1\n";
     float* bufferPointer =
         static_cast<float*>(m_dist_matrix_buffer->contents());
     for (size_t i = 0; i < m_N; ++i) {
         std::memcpy(bufferPointer + i * m_N, m_dist_matrix_vec[i].data(),
                     m_N * sizeof(float));
     }
-
-    std::cout << "data prepared\n";
 }
-
-// void MetalSPE::generate_random_float_data(MTL::Buffer* buffer) {
-//     float* data_ptr = (float*)buffer->contents();
-//     for (unsigned long index = 0; index < array_length; index++) {
-//         data_ptr[index] = (float)rand() / (float)(RAND_MAX);
-//     }
-// }
 
 void MetalSPE::generate_random_float2_data(MTL::Buffer* buffer,
                                            unsigned long num_elements) {
@@ -116,7 +105,6 @@ void MetalSPE::generate_random_float2_data(MTL::Buffer* buffer,
 }
 
 void MetalSPE::do_spe_loop() {
-    std::cout << "starting\n";
     auto start = std::chrono::high_resolution_clock::now();
     float initial_lr = m_params.initial_lr;
     float final_lr = m_params.final_lr;
@@ -146,7 +134,7 @@ void MetalSPE::do_spe_loop() {
             batches_committed++;
         }
         command_buffer->commit();
-        std::cout << "at " << batches_committed << "\n";
+        // std::cout << "at " << batches_committed << "\n";
     }
 
     std::cout << "waiting...\n";
@@ -155,17 +143,13 @@ void MetalSPE::do_spe_loop() {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
 
-    std::cout << "SPE loop completed in " << elapsed.count() << " seconds\n";
+    std::cout << "Computing embeddings took " << elapsed.count()
+              << " seconds\n";
 }
 
 void MetalSPE::encode_spe_command(MTL::ComputeCommandEncoder* compute_encoder,
                                   uint pivot_idx, float learning_rate) {
     compute_encoder->setComputePipelineState(m_spe_function_pso);
-
-    // compute_encoder->setBuffer(m_coords_buffer, 0, 0);
-
-    // compute_encoder->setBytes(&pivot_idx, sizeof(pivot_idx), 1);
-    // compute_encoder->setBytes(&learning_rate, sizeof(learning_rate), 2);
 
     compute_encoder->setBuffer(m_coords_buffer, 0, 0);
     compute_encoder->setBuffer(m_dist_matrix_buffer, 0, 1);
@@ -191,7 +175,7 @@ void MetalSPE::encode_spe_command(MTL::ComputeCommandEncoder* compute_encoder,
 void MetalSPE::write_results() {
     float2* bufferPointer = static_cast<float2*>(m_coords_buffer->contents());
 
-    std::ofstream outputFile("embeddings.txt");
+    std::ofstream outputFile("metal/embeddings.txt");
     for (int i = 0; i < m_N; ++i) {
         outputFile << bufferPointer[i].x << ", " << bufferPointer[i].y
                    << std::endl;

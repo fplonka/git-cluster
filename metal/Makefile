@@ -19,7 +19,7 @@ METAL_AIR = $(BUILD_DIR)/add.air
 METAL_LIB = $(BUILD_DIR)/default.metallib
 CPP_SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
 OBJECTS = $(CPP_SOURCES:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
-EXECUTABLE = $(BUILD_DIR)/MetalAdderApp
+EXECUTABLE = $(BUILD_DIR)/MetalSPE
 
 # Metal shader compilation
 $(METAL_LIB): $(METAL_AIR)
