@@ -7,8 +7,7 @@
 
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
-
-#include "cnpy.h"
+#include <string>
 
 struct float2 {
     float x, y;
@@ -25,7 +24,7 @@ struct RunParams {
 
 class MetalSPE {
    public:
-    MetalSPE(std::string distancec_matrix_filename);
+    MetalSPE(std::string distance_matrix_filename);
 
     MTL::Device *m_device;
     MTL::ComputePipelineState *m_spe_function_pso;
@@ -40,7 +39,6 @@ class MetalSPE {
     void write_results();
 
    private:
-    void init_params_from_file(const std::string &filename);
     void generate_random_float_data(MTL::Buffer *buffer);
     void generate_random_float2_data(MTL::Buffer *buffer,
                                      unsigned long num_element);
@@ -48,7 +46,8 @@ class MetalSPE {
                             uint pivot_idx, float learning_rate);
 
     RunParams m_params;
+    std::string m_params_filename;
     unsigned long m_N;
-    cnpy::NpyArray m_dist_matrix_nparr;
-    std::vector<std::vector<float>> m_dist_matrix_vec;
+    // std::vector<std::vector<float>> m_dist_matrix_vec;
+    // std::vector<std::vector<uint16_t>> m_dist_matrix_vec_bfloat;
 };

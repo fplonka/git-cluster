@@ -145,3 +145,10 @@ def calculate_loss3(X, D):
     loss = np.sum((D - distances) ** 2) / 2
 
     return loss
+
+
+def calculate_normalized_loss(X, D):
+    distances = euclidean_distances(X)
+    loss = np.sum((D - distances) ** 2) / 2
+    normalization_factor = np.sum(D**2) / 2
+    return loss / normalization_factor

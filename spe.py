@@ -281,9 +281,9 @@ def spe_optimized_parallel_dist(distance_matrix, n_iter, lr, lr_final, n_threads
     coords = np.random.rand(N, 2) - 0.5
 
     for iter_idx in range(n_iter):
-        # learning_rate = sgdr_schedule(lr_initial, lr_final, iter_idx, n_iter)
-        learning_rate = lr_initial + \
-            (lr_final - lr_initial) / n_iter * iter_idx
+        learning_rate = sgdr_schedule(lr_initial, lr_final, iter_idx, n_iter)
+        # learning_rate = lr_initial + \
+        # (lr_final - lr_initial) / n_iter * iter_idx
 
         foo3(N, coords, distance_matrix, learning_rate, epsilon)
         if iter_idx % 1000 == 0:

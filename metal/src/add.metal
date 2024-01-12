@@ -27,10 +27,25 @@ kernel void update_coords(
 {
     float2 xi = coords[i];
     float2 xj = coords[j];
-    // float rij = 1.f;
     float rij = dist_matrix[i * N + j];
 
     float dij = sqrt((xi[0] - xj[0])*(xi[0] - xj[0]) + (xi[1] - xj[1])*(xi[1] - xj[1]));
+    
+    coords[j] -= (xi - xj) * learning_rate * (rij - dij) / (dij + epsilon);
+}
+
+kernel void update_coords_bfloat(
+    device float2* coords,
+    constant bfloat* dist_matrix,
+    constant uint& i, // pivot coord index
+    constant float& learning_rate,
+    constant uint& N,
+    uint j [[thread_position_in_grid]])
+{
+    float2 xi = coords[i];
+    float2 xj = coords[j];
+    float rij = dist_matrix[i * N + j];
+    float dij = float(sqrt((xi[0] - xj[0])*(xi[0] - xj[0]) + (xi[1] - xj[1])*(xi[1] - xj[1])));
     
     coords[j] -= (xi - xj) * learning_rate * (rij - dij) / (dij + epsilon);
 }

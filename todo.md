@@ -5,3 +5,4 @@
   - min hash to estimate jaccard (should have done this earlier!!!!! can be parallized)
 
 - update req.txt
+- update makefile (different metalcpp locations...)

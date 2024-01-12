@@ -6,51 +6,15 @@
 
 #include "MetalSPE.hpp"
 
+#include <math.h>
+
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
 
-void MetalSPE::init_params_from_file(const std::string& filename) {
-    std::ifstream file(filename, std::ios::binary);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("Unable to open dist matrix data file");
-    }
-
-    RunParams params{};
-
-    file.read(reinterpret_cast<char*>(&params.num_iterations),
-              sizeof(params.num_iterations));
-    file.read(reinterpret_cast<char*>(&params.initial_lr),
-              sizeof(params.initial_lr));
-    file.read(reinterpret_cast<char*>(&params.final_lr),
-              sizeof(params.final_lr));
-
-    m_params = params;
-
-    int N;
-    file.read(reinterpret_cast<char*>(&N), sizeof(N));
-    m_N = N;
-
-    // Resize the matrix to N x N
-    std::vector<std::vector<float>> matrix{};
-    matrix.resize(N, std::vector<float>(N));
-
-    // Read the array data
-    for (auto& row : matrix) {
-        file.read(reinterpret_cast<char*>(row.data()),
-                  row.size() * sizeof(float));
-    }
-    m_dist_matrix_vec = matrix;
-}
-
-MetalSPE::MetalSPE(std::string distance_matrix_filename) {
-    m_dist_matrix_vec = std::vector<std::vector<float>>();
-    init_params_from_file(distance_matrix_filename);
-    // std::cout << "N is " << m_N << "\n";
-    // std::cout << "params are: " << m_params.num_iterations << " "
-    //   << m_params.initial_lr << " " << m_params.final_lr << "\n";
-}
+MetalSPE::MetalSPE(std::string distance_matrix_filename)
+    : m_params_filename(distance_matrix_filename) {}
 
 void MetalSPE::init_with_device(MTL::Device* device) {
     m_device = device;
@@ -62,8 +26,10 @@ void MetalSPE::init_with_device(MTL::Device* device) {
         std::exit(-1);
     }
 
+    // auto function_name =
+    //     NS::String::string("update_coords", NS::ASCIIStringEncoding);
     auto function_name =
-        NS::String::string("update_coords", NS::ASCIIStringEncoding);
+        NS::String::string("update_coords_bfloat", NS::ASCIIStringEncoding);
     auto spe_function = default_library->newFunction(function_name);
 
     if (!spe_function) {
@@ -76,23 +42,49 @@ void MetalSPE::init_with_device(MTL::Device* device) {
 };
 
 void MetalSPE::prepare_data() {
+    // Read run data and params from file
+    std::cout << "Reading matrix data in C++ subprocess...\n";
+    std::cout.flush();
+    std::ifstream file(m_params_filename, std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("Unable to open dist matrix data file");
+    }
+
+    RunParams params{};
+    file.read(reinterpret_cast<char*>(&params.num_iterations),
+              sizeof(params.num_iterations));
+    file.read(reinterpret_cast<char*>(&params.initial_lr),
+              sizeof(params.initial_lr));
+    file.read(reinterpret_cast<char*>(&params.final_lr),
+              sizeof(params.final_lr));
+    m_params = params;
+
+    int N;
+    file.read(reinterpret_cast<char*>(&N), sizeof(N));
+    m_N = N;
+
     // Init with random coords
     m_coords_buffer = m_device->newBuffer(m_N * sizeof(float2),
                                           MTL::ResourceStorageModeShared);
     generate_random_float2_data(m_coords_buffer, m_N);
 
-    // Place distance matrix in buffer
-    size_t dist_matrix_size = m_N * m_N * sizeof(float);
+    std::cout << "writing to buffer...\n";
+
+    size_t dist_matrix_size = m_N * m_N * sizeof(uint16_t);
+    auto m = m_device->maxBufferLength();
+    std::cout << "MAX: " << m << "\n";
+    std::cout << "size: " << dist_matrix_size << "\n";
     m_dist_matrix_buffer =
         m_device->newBuffer(dist_matrix_size, MTL::ResourceStorageModeShared);
-    // std::memcpy(m_dist_matrix_buffer->contents(),
-    // m_dist_matrix_nparr.data<float>(), dist_matrix_size);
-    float* bufferPointer =
-        static_cast<float*>(m_dist_matrix_buffer->contents());
-    for (size_t i = 0; i < m_N; ++i) {
-        std::memcpy(bufferPointer + i * m_N, m_dist_matrix_vec[i].data(),
-                    m_N * sizeof(float));
+    if (!m_dist_matrix_buffer) {
+        std::cout << "couldn't make buffer\n...";
     }
+
+    file.read(reinterpret_cast<char*>(m_dist_matrix_buffer->contents()),
+              dist_matrix_size);
+
+    std::cout << "done\n";
 }
 
 void MetalSPE::generate_random_float2_data(MTL::Buffer* buffer,
@@ -117,13 +109,20 @@ void MetalSPE::do_spe_loop() {
     const uint batch_size = 5000;
     uint batches_committed = 0;
 
+    std::cout << std::fixed << std::setprecision(2);
+
     MTL::CommandBuffer* command_buffer = nullptr;
     while (batches_committed < num_iters) {
         command_buffer = m_command_queue->commandBuffer();
         for (int itr_idx = 0;
              itr_idx < batch_size && batches_committed < num_iters; ++itr_idx) {
-            float lr = initial_lr + (final_lr - initial_lr) / float(num_iters) *
-                                        float(batches_committed);
+            float lr =
+                final_lr + 0.5f * (initial_lr - final_lr) *
+                               (1 + cos(M_PI * ((float)batches_committed) /
+                                        float(num_iters)));
+
+            // float lr = initial_lr + (final_lr - initial_lr) /
+            // float(num_iters) * float(batches_committed);
             uint pivot_idx = distr(gen);
 
             MTL::ComputeCommandEncoder* compute_encoder =
@@ -148,8 +147,8 @@ void MetalSPE::do_spe_loop() {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
 
-    // std::cout << "Computing embeddings took " << elapsed.count()
-    //   << " seconds\n";
+    std::cout << "Computing embeddings took " << elapsed.count()
+              << " seconds\n";
 }
 
 void MetalSPE::encode_spe_command(MTL::ComputeCommandEncoder* compute_encoder,
