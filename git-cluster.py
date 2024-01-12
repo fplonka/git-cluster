@@ -4,6 +4,7 @@ from plotly.subplots import make_subplots
 import math
 # import graph_tool.all as gt
 import numba
+from numba import prange
 from utils import calculate_loss, minhash_signature, estimated_jaccard, calculate_loss2, calculate_loss3, calculate_normalized_loss
 from utils import log_space_values
 from skopt import gp_minimize
@@ -54,16 +55,16 @@ def get_commits(repo_path):
     return commits
 
 
-@numba.jit(nopython=True, fastmath=True)
+@numba.jit(nopython=True, fastmath=True, parallel=True)
 def create_distance_matrix_fast(commits_arr):
     N = len(commits_arr)
     matrix = np.ones((N, N), dtype=np.float32)
 
     for i in range(N):
-        for j in range(i+1, N):
+        for j in prange(i+1, N):
             score = jaccard_fast(commits_arr[i], commits_arr[j])
-            matrix[i][j] = 1 - score**0.5 + 0.00001
-            matrix[j][i] = 1 - score**0.5 + 0.00001
+            matrix[i][j] = 1 - score
+            matrix[j][i] = 1 - score
 
         with numba.objmode():
             # print(f"\rAt ({((i+1)/N):.2f}%)", end="")
@@ -382,12 +383,10 @@ def process_repository(args):
         N = len(file_names)
         commits_arr = dict_to_padded_array(commits)
 
-        print("Creating distance matrix...")
         t0 = time.time()
         distance_matrix = create_distance_matrix_fast(commits_arr)
         t1 = time.time()
-        # distance_matrix = distance_matrix.astype(np.float16)
-        print(f"Took {t1 - t0}s")
+        print("took", t1-t0)
 
         if using_cache:
             with open(cache_path, 'wb') as f:
@@ -428,6 +427,10 @@ def process_repository(args):
     print("Visualising embeddings...")
     visualize_embedding_with_extension_color(
         embedding, file_names, commits, repo_name, output_file)
+
+    # print("Loss:", calculate_loss(embedding, distance_matrix))
+    # print("Normalized loss:", calculate_normalized_loss(
+    # embedding, distance_matrix))
 
 
 def clone_repo(repo_url, temp_dir):
