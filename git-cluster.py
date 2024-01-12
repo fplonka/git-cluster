@@ -26,11 +26,9 @@ from sklearn.decomposition import TruncatedSVD
 
 from utils import calculate_correlation, jaccard_fast
 
-from spe import spe_optimized
-from spe import spe_optimized_parallel
-from spe import spe_optimized_parallel_fancy
-from spe import spe_optimized_parallel_dist
-from spe import spe_optimized_parallel_fancy_animated
+from spe import spe_with_commits_arr
+from spe import spe_with_dist_matrix
+from spe import spe_with_commits_arr_animated
 
 
 def run_git_command(repo_path, command):
@@ -268,7 +266,7 @@ def find_params2(commits_arr, distance_matrix):
 
     @use_named_args(space)
     def objective(**params):
-        embedding = spe_optimized_parallel_fancy(
+        embedding = spe_with_commits_arr(
             commits_arr, 5000, params['lr'], params['lr_final'])
         return calculate_loss(embedding, distance_matrix)
 
@@ -421,7 +419,7 @@ def process_repository(args):
         embedding = get_gpu_embeddings('metal/embeddings.txt')
         os.remove('dist_matrix_data')
     else:
-        embedding = spe_optimized_parallel_dist(
+        embedding = spe_with_dist_matrix(
             distance_matrix, args.num_iterations, initial_lr, final_lr)
 
     t1 = time.time()

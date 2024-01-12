@@ -5,14 +5,6 @@ from sklearn.metrics.pairwise import euclidean_distances
 
 
 def calculate_correlation(embedding, distance_matrix):
-    # N = distance_matrix.shape[0]
-    # n = 5000
-    # if N > n:
-    #     indices = np.random.choice(N, n, replace=False)
-    #     selected_embedding = embedding[indices, :]
-    #     selected_distance_matrix = distance_matrix[np.ix_(indices, indices)]
-    #     return calculate_correlation(selected_embedding, selected_distance_matrix)
-
     distance_matrix_ld = euclidean_distances(embedding)
     correlation, _ = pearsonr(distance_matrix.ravel(),
                               distance_matrix_ld.ravel())
@@ -124,10 +116,7 @@ def minhash_signature(matrix, num_hashes, max_int=np.iinfo(np.int32).max):
 @numba.jit(nopython=True)
 def estimated_jaccard(signature_matrix, i, j):
     intersection = np.sum(signature_matrix[i] == signature_matrix[j])
-    # print("intersection:", intersection)
-    # print("dividing by", signature_matrix.shape[1])
     res = intersection / signature_matrix.shape[1]
-    # print("retunring", res)
     return res
 
 
