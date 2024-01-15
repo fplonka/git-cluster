@@ -1,15 +1,13 @@
 import numba
-from scipy.stats import pearsonr
 import numpy as np
-from sklearn.metrics.pairwise import euclidean_distances
 
 
-def calculate_correlation(embedding, distance_matrix):
-    distance_matrix_ld = euclidean_distances(embedding)
-    correlation, _ = pearsonr(distance_matrix.ravel(),
-                              distance_matrix_ld.ravel())
+# def calculate_correlation(embedding, distance_matrix):
+#     distance_matrix_ld = euclidean_distances(embedding)
+#     correlation, _ = pearsonr(distance_matrix.ravel(),
+#                               distance_matrix_ld.ravel())
 
-    return correlation
+#     return correlation
 
 
 def log_space_values(a, b, n):

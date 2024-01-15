@@ -1,16 +1,9 @@
-import struct
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
-import math
 import sys
-# import graph_tool.all as gt
 import numba
 from numba import prange
-from utils import calculate_loss, minhash_signature, estimated_jaccard, calculate_loss2, calculate_loss3, calculate_normalized_loss
-from utils import log_space_values
-from skopt import gp_minimize
-from skopt.space import Real
-from skopt.utils import use_named_args
+from utils import calculate_loss
 import numpy as np
 import tempfile
 import plotly.express as px
@@ -21,12 +14,10 @@ import os
 import subprocess
 import webbrowser
 from urllib.parse import urlparse
-from sklearn.manifold import MDS
 import numpy as np
 import time
-from sklearn.decomposition import TruncatedSVD
 
-from utils import calculate_correlation, jaccard_fast
+from utils import jaccard_fast
 
 from spe import spe_with_commits_arr
 from spe import spe_with_dist_matrix
@@ -257,30 +248,6 @@ def dict_to_padded_array(commit_dict):
         padded_array[row].sort()
 
     return padded_array
-
-
-def find_params2(commits_arr, distance_matrix):
-    # Define the space of hyperparameters to search
-    space = [
-        Real(0.0001, 10.0, name='lr'),
-        Real(0.00000001, 0.1, name='lr_final')
-    ]
-
-    @use_named_args(space)
-    def objective(**params):
-        embedding = spe_with_commits_arr(
-            commits_arr, 5000, params['lr'], params['lr_final'])
-        return calculate_loss(embedding, distance_matrix)
-
-    # Run the optimization
-    res_gp = gp_minimize(objective, space, n_calls=200,
-                         random_state=0, verbose=True)
-
-    # Results
-    print("Best score=%.4f" % res_gp.fun)
-    print("""Best parameters:
-    - lr=%.6f
-    - decay=%.6f""" % (res_gp.x[0], res_gp.x[1]))
 
 
 def get_gpu_embeddings(file_path):
