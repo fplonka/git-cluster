@@ -1,9 +1,11 @@
 ## Description
 
-Visualize file relationships in a Git repository as an interactive 2D plot using multidimensional scaling (MDS). Files frequently modified together in commits are positioned closely in the visualization.
+Visualize file relationships in a Git repository as an interactive 2D plot using GPU-accelerated multidimensional scaling (MDS). Files frequently modified together in commits are positioned closely in the visualization.
 
 
 ### Example visualisations
+
+ For interactive visualisations of 100 popular repositores see [fplonka.dev/git-cluster](https://fplonka.dev/git-cluster).
 
 [pytorch/pytorch](https://github.com/pytorch/pytorch)
 <img width="1011" alt="image" src="https://github.com/fplonka/git-cluster/assets/92261790/8b7ee22a-8c2a-4155-9117-3428a8c14adb">
@@ -18,30 +20,51 @@ Visualize file relationships in a Git repository as an interactive 2D plot using
 
 ## Installation
 
-Requires Python 3. Install dependencies with:
+
+Requires Python 3. Clone the repo and install dependencies with:
 
 ```bash
+git clone https://github.com/fplonka/git-cluster
+cd git-cluster
 pip install -r requirements.txt
 ```
 
+GPU acceleration for git-cluster uses Apple Metal shaders, which are only available on Apple platforms. GPU acceleration has currently only been tested on Apple Silicon MacBooks. To use GPU acceleration, you need to download [metal-cpp](https://developer.apple.com/metal/cpp). Extract the contents of the .zip file to `/path/to/metal-cpp/` then run:
+```bash
+cd metal/
+make all METAL_CPP_PATH=/path/to/metal-cpp/
+```
+After this you can pass the `--use-gpu` flag to use GPU acceleration. This makes computing the embeddings ~200x faster, which is particularly useful on large repositories where for the best results 1 milion or more iterations are needed.
+
+
 ## Usage
 
-```bash
-python main.py target_repo_dir_or_url [-o output_file]
+Run `python git-cluster.py` in the `git-cluter/` directory.
+
 ```
+usage: git-cluster.py [-h] [-o OUTPUT]
+                      [-n NUM_ITERATIONS]
+                      [--use-gpu] [-c]
+                      repo_path_or_url
 
-### Examples
+positional arguments:
+  repo_path_or_url      Path to or URL of the
+                        Git repository
 
-```bash
-python main.py /path/to/local/repo
-```
-
-```bash
-python main.py /path/to/repo -o output.html
-```
-
-```bash
-python main.py https://github.com/user/repo.git
+options:
+  -h, --help            show this help message
+                        and exit
+  -o OUTPUT, --output OUTPUT
+                        Output file for the
+                        visualization
+  -n NUM_ITERATIONS, --num-iterations NUM_ITERATIONS
+                        Number of iterations to
+                        run the algorithm
+                        (default: 10000)
+  --use-gpu             Use GPU for computations
+                        (ARM MacOS only)
+  -c, --cache           Cache distance matrix
+                        for future reuse
 ```
 
 ### Method
@@ -50,5 +73,3 @@ For each pair of files in the specified repository we compute a distance metric:
 On this distance matrix we can apply techniques from [multidimensional scaling](https://en.wikipedia.org/wiki/Multidimensional_scaling), which assigns a point in 2D to each file. These points are chosen such that the Euclidian distance between them is close to their distance in the distance matrix. When we plot this with [plotly](https://plotly.com/python) we get a visualisation where files which are worked on (committed) together are close together. For most repositories this reveals interesting structure.
 
 The method used to find these 2D positions is [pivot-based Stochastic Proximity Embedding](https://www.researchgate.net/publication/10602021_A_modified_update_rule_for_stochastic_proximity_embedding), which, over many iterations, picks a random point and then adjusts the position of all other points so that their embedding distance to the pivot point more closely matches their distance metric to the pivot. The adjustments are proportional to a learning rate which is decreased over time. For large repositories (10k+ files) around 1 milion such iterations are needed to get a very good result.
-
-A goal for a future version is to compute the embedding on the GPU using metal shaders, hopefully speeding up the whole process significantly.
