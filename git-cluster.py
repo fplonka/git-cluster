@@ -2,6 +2,7 @@ import struct
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import math
+import sys
 # import graph_tool.all as gt
 import numba
 from numba import prange
@@ -63,13 +64,13 @@ def create_distance_matrix_fast(commits_arr):
     for i in range(N):
         for j in prange(i+1, N):
             score = jaccard_fast(commits_arr[i], commits_arr[j])
-            matrix[i][j] = 1 - score
-            matrix[j][i] = 1 - score
+            matrix[i][j] = 1 - score + 1e-8
+            matrix[j][i] = 1 - score + 1e-8
 
         with numba.objmode():
             # print(f"\rAt ({((i+1)/N):.2f}%)", end="")
             print("\rCalculating distance matrix... ({:.2f})%".format(
-                (i+1)/N * 100), end="")
+                (i+1)/N * 100), end="", file=sys.stderr)
 
     print()
 
@@ -214,8 +215,8 @@ def visualize_embedding_with_extension_color(embedding, file_names, commits, rep
 
     layout = go.Layout(
         title=f'File Commit-Similarity Visualization for {repo_name}',
-        xaxis=dict(title='MDS Dimension 1'),
-        yaxis=dict(title='MDS Dimension 2'),
+        xaxis=dict(title='MDS Dimension 1', constrain='domain'),
+        yaxis=dict(title='MDS Dimension 2', scaleanchor='x', scaleratio=1),
         hovermode='closest',
         paper_bgcolor='white',
         plot_bgcolor='rgba(240,240,240,1)'
@@ -304,12 +305,15 @@ def write_dist_matrix_and_params_to_file(num_iters, initial_lr, final_lr, distan
         N = distance_matrix.shape[0]
         f.write(np.int32(N).tobytes())
 
-        # D = distance_matrix.astype(np.float16)
-        # f.write(D.tobytes())
+        D = distance_matrix.astype(np.float16)
+        if np.isnan(D).any():
+            print("ERRORRRRRRRRRRRRRRRRRRR")
+            raise ValueError("distance_matrix contains NaN values")
+        f.write(D.tobytes())
 
-        D_uint32 = distance_matrix.astype(np.float32).view(np.uint32)
-        D_bfloat16 = (D_uint32 >> 16).astype(np.uint16)
-        f.write(D_bfloat16.tobytes())
+        # D_uint32 = distance_matrix.astype(np.float32).view(np.uint32)
+        # D_bfloat16 = (D_uint32 >> 16).astype(np.uint16)
+        # f.write(D_bfloat16.tobytes())
 
 
 def run_cpp_process():
@@ -383,10 +387,10 @@ def process_repository(args):
         N = len(file_names)
         commits_arr = dict_to_padded_array(commits)
 
-        t0 = time.time()
+        # t0 = time.time()
         distance_matrix = create_distance_matrix_fast(commits_arr)
-        t1 = time.time()
-        print("took", t1-t0)
+        # t1 = time.time()
+        # print("took", t1-t0)
 
         if using_cache:
             with open(cache_path, 'wb') as f:
@@ -394,7 +398,7 @@ def process_repository(args):
                 np.save(f'{cache_path}.npy', distance_matrix)
                 print("Saved distance matrix and commit info to cache")
 
-    commits_arr = dict_to_padded_array(commits)
+    # commits_arr = dict_to_padded_array(commits)
 
     print("N is", N)
     print("Creating embeddings...")
@@ -407,19 +411,25 @@ def process_repository(args):
         if N > 2**16:
             print("WARNING: data set too large to fit in one GPU buffer (at least on the author's machine). Reducing to random subset of 65536 files.")
             indices = np.random.choice(N, 65536, replace=False)
-            distance_matrix = distance_matrix[np.ix_(indices, indices)]
             file_names = file_names[indices]
-            commits_arr = commits_arr[indices]
+            # commits_arr = commits_arr[indices]
+            print("done")
+            distance_matrix = distance_matrix[np.ix_(indices, indices)]
+            print("done")
             N = 2**16
+            print("done")
 
         write_dist_matrix_and_params_to_file(
             args.num_iterations, initial_lr, final_lr, distance_matrix, 'dist_matrix_data')
         run_cpp_process()
         embedding = get_gpu_embeddings('metal/embeddings.txt')
-        os.remove('dist_matrix_data')
+        # os.remove('dist_matrix_data')
     else:
         embedding = spe_with_dist_matrix(
             distance_matrix, args.num_iterations, initial_lr, final_lr)
+
+    means = embedding.mean(axis=0)
+    embedding -= means
 
     t1 = time.time()
     print(f"Calculating embeddings took {t1 - t0 :.1f}s")

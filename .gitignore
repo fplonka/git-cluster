@@ -7,3 +7,8 @@ dist_matrix_data
 **/embeddings.txt
 metal/build/*
 **/top100
+
+format.md
+script.py
+sorted_files.txt
+sorted_list.md

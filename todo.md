@@ -6,3 +6,5 @@
 
 - update req.txt
 - update makefile (different metalcpp locations...)
+- remove .vscode from git
+- similarity with shingles instead?

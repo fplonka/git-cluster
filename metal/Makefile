@@ -2,7 +2,7 @@
 
 # Compiler settings
 CXX = clang++
-CXXFLAGS = -std=c++17 -framework Metal -framework Foundation -framework MetalKit -I/Users/filip/Downloads/metal-cpp -I/usr/local/include
+CXXFLAGS = -std=c++17 -framework Metal -framework Foundation -framework MetalKit -I$(METAL_CPP_PATH) -I/usr/local/include -fno-fast-math
 # LDFLAGS = -L/usr/local/lib -lcnpy
 LDFLAGS = -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lcnpy
 
