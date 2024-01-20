@@ -66,7 +66,7 @@ options:
                         for future reuse
 ```
 
-### Method
+## Method
 For each pair of files in the specified repository we compute a distance metric: 1 - (number of commits which change both files) / (number of commits which change at least one of the files). For a repository with N files this gives us an N x N distance matrix.
 
 On this distance matrix we can apply techniques from [multidimensional scaling](https://en.wikipedia.org/wiki/Multidimensional_scaling), which assigns a point in 2D to each file. These points are chosen such that the Euclidian distance between them is close to their distance in the distance matrix. When we plot this with [plotly](https://plotly.com/python) we get a visualisation where files which are worked on (committed) together are close together. For most repositories this reveals interesting structure.
