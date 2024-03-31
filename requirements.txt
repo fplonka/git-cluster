@@ -2,3 +2,4 @@ numba
 numpy
 plotly
 pandas
+scipy
