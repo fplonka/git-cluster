@@ -35,6 +35,19 @@ make all METAL_CPP_PATH=/path/to/metal-cpp/
 ```
 After this you can pass the `--use-gpu` flag to use GPU acceleration. This makes computing the embeddings ~200x faster, which is particularly useful on large repositories where for the best results 1 milion or more iterations are needed.
 
+### Examples
+
+Run git-cluster on the [Rust](https://github.com/rust-lang/rust) repo, using 20000 iterations, saving the resulting visualisation to `node.html`:
+```bash
+python git-cluster.py https://github.com/nodejs/node --num-iterations 20000 --output node.html
+```
+
+Run git-cluster on a local repo, using the default 100000 iterations, enabling GPU acceleration, and caching computed data so that when you run git-cluster on the repo next time, you don't have to clone it again:
+
+```bash
+python git-cluster.py /path/to/local/repo --use-gpu --use-cache
+```
+
 
 ## Usage
 
