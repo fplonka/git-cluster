@@ -1,6 +1,6 @@
 ## Description
 
-Visualize file relationships in a Git repository as an interactive 2D plot using GPU-accelerated multidimensional scaling (MDS). Files frequently modified together in commits are positioned closely in the visualization.
+Visualize file relationships in a Git repository as an interactive 2D plot using GPU-accelerated multidimensional scaling (MDS). Each file is represented by a dot, and files frequently modified together in commits are positioned closely in the visualization.
 
 
 ### Example visualisations
