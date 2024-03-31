@@ -37,9 +37,9 @@ After this you can pass the `--use-gpu` flag to use GPU acceleration. This makes
 
 ### Examples
 
-Run git-cluster on the [Rust](https://github.com/rust-lang/rust) repo, using 20000 iterations, saving the resulting visualisation to `node.html`:
+Run git-cluster on the [Rust](https://github.com/rust-lang/rust) repo, using 20000 iterations, saving the resulting visualisation to `rust.html`:
 ```bash
-python git-cluster.py https://github.com/nodejs/node --num-iterations 20000 --output node.html
+python git-cluster.py https://github.com/nodejs/node --num-iterations 20000 --output rust.html
 ```
 
 Run git-cluster on a local repo, using the default 100000 iterations, enabling GPU acceleration, and caching computed data so that when you run git-cluster on this repo next time, you don't have to clone it again:
