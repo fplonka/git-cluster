@@ -28,7 +28,7 @@ cd git-cluster
 pip install -r requirements.txt
 ```
 
-GPU acceleration for git-cluster uses Apple Metal shaders, which are only available on Apple platforms. GPU acceleration has currently only been tested on Apple Silicon MacBooks. To use GPU acceleration, you need to download [metal-cpp](https://developer.apple.com/metal/cpp). Extract the contents of the .zip file to `/path/to/metal-cpp/` then run:
+GPU acceleration for git-cluster uses Apple Metal shaders, which are only available on Apple platforms. GPU acceleration has currently only been tested on my M1 Macbook Air. To use GPU acceleration, you need to download [metal-cpp](https://developer.apple.com/metal/cpp). Extract the contents of the .zip file to `/path/to/metal-cpp/` then run:
 ```bash
 cd metal/
 make all METAL_CPP_PATH=/path/to/metal-cpp/
