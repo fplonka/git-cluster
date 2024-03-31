@@ -288,7 +288,7 @@ def run_cpp_process():
 
     if not os.path.exists(cpp_executable):
         print(
-            f"Error: executable {cpp_executable} not found. Run `make all` in metal/ first to use GPU acceleration.")
+            f"Error: executable {cpp_executable} not found. Run `make all METAL_CPP_PATH=/path/to/metal-cpp/` in metal/ first to use GPU acceleration.")
         exit(1)
 
     # Start the C++ executable process
